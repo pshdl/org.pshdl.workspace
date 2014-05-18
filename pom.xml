@@ -4,6 +4,23 @@
 	<groupId>org.pshdl</groupId>
 	<artifactId>workspace</artifactId>
 	<version>0.1.79</version>
+		<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<jerseyVersion>2.6</jerseyVersion>
+	</properties>
+	<distributionManagement>
+		<repository>
+			<id>repo</id>
+			<url>file:///Users/karstenbecker/Dropbox/PSHDL/MavenRepo/</url>
+		</repository>
+	</distributionManagement>
+	<repositories>
+		<repository>
+			<id>pshdl</id>
+			<url>http://maven.pshdl.org/</url>
+		</repository>
+	</repositories>
 	<build>
 		<sourceDirectory>src</sourceDirectory>
 		<plugins>
