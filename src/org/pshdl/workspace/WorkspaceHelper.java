@@ -145,19 +145,22 @@ public class WorkspaceHelper {
 		try {
 			while (!queue.isEmpty()) {
 				directory = queue.pop();
-				for (final File kid : directory.listFiles()) {
-					String name = base.relativize(kid.toURI()).getPath();
-					if (name.endsWith(".git/") || name.endsWith(REPO_INFO_JSON)) {
-						continue;
-					}
-					if (kid.isDirectory()) {
-						queue.push(kid);
-						name = name.endsWith("/") ? name : name + "/";
-						zout.putNextEntry(new ZipEntry(name));
-					} else {
-						zout.putNextEntry(new ZipEntry(name));
-						Files.copy(kid, zout);
-						zout.closeEntry();
+				final File[] listFiles = directory.listFiles();
+				if (listFiles != null) {
+					for (final File kid : listFiles) {
+						String name = base.relativize(kid.toURI()).getPath();
+						if (name.endsWith(".git/") || name.endsWith(REPO_INFO_JSON)) {
+							continue;
+						}
+						if (kid.isDirectory()) {
+							queue.push(kid);
+							name = name.endsWith("/") ? name : name + "/";
+							zout.putNextEntry(new ZipEntry(name));
+						} else {
+							zout.putNextEntry(new ZipEntry(name));
+							Files.copy(kid, zout);
+							zout.closeEntry();
+						}
 					}
 				}
 			}
