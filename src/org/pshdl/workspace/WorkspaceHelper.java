@@ -122,7 +122,10 @@ public class WorkspaceHelper {
 	public static void deleteFile(File workingDir, String f) throws Exception {
 		final FileInfo removed = RepoCache.removeFile(workingDir, f);
 		if (removed != null) {
-			new File(workingDir, f).delete();
+			final File file = new File(workingDir, f);
+			if (!file.delete()) {
+				LOG.log(Level.WARNING, "Failed to delete:" + file);
+			}
 			deleteGeneratedFiles(workingDir.getName(), removed, null);
 			service.pushMessage(workingDir.getName(), new Message<>("FileInfo", Message.WORK_DELETED, removed, null));
 		}
@@ -208,12 +211,16 @@ public class WorkspaceHelper {
 
 	private static void deleteFile(File srcGenFolder, File file) {
 		if (file.exists()) {
-			file.delete();
+			if (!file.delete()) {
+				LOG.log(Level.WARNING, "Failed to delete file:" + file);
+			}
 		} else
 			return;
 		File folder = file.getParentFile();
 		while ((folder != null) && (folder.list() != null) && !folder.equals(srcGenFolder) && (folder.list().length == 0)) {
-			folder.delete();
+			if (!folder.delete()) {
+				LOG.log(Level.WARNING, "Failed to delete folder:" + folder);
+			}
 			folder = folder.getParentFile();
 		}
 	}

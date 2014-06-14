@@ -82,7 +82,8 @@ public class GITTools {
 		final FileRepositoryBuilder builder = new FileRepositoryBuilder();
 		final Repository repository = builder.setGitDir(dir).setWorkTree(workingDir).build();
 		if (!dir.exists()) {
-			workingDir.mkdirs();
+			if (!workingDir.exists() && !workingDir.mkdirs())
+				throw new IllegalArgumentException("Failed to create directory:" + workingDir);
 			repository.create();
 		}
 		return new Git(repository);

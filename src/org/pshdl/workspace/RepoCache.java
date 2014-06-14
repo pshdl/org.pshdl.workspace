@@ -140,12 +140,14 @@ public class RepoCache {
 		for (final File file : files) {
 			if (file.isDirectory()) {
 				deleteDir(file);
-				file.delete();
-			} else {
-				file.delete();
+			}
+			if (!file.delete()) {
+				log.log(Level.WARNING, "Failed to delete file:" + file);
 			}
 		}
-		dir.delete();
+		if (!dir.delete()) {
+			log.log(Level.WARNING, "Failed to delete directory:" + dir);
+		}
 	}
 
 	public static RepoInfo createRepo(String wid, String eMail, String name) throws IOException {
@@ -155,7 +157,9 @@ public class RepoCache {
 		info.setName(name);
 		info.setJsonVersion(JSON_VERSION);
 		Files.write(name + '\n' + eMail, getOwnerFile(wid), StandardCharsets.UTF_8);
-		WorkspaceHelper.getWorkspacePath(wid).mkdirs();
+		final File workspacePath = WorkspaceHelper.getWorkspacePath(wid);
+		if (!workspacePath.mkdirs())
+			throw new IllegalArgumentException("Failed to create directory:" + workspacePath);
 		saveToFile(info);
 		return info;
 	}
