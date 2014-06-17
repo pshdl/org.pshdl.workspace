@@ -144,8 +144,7 @@ public class WorkspaceHelper {
 		final URI base = directory.toURI();
 		final Deque<File> queue = Lists.newLinkedList();
 		queue.push(directory);
-		final ZipOutputStream zout = new ZipOutputStream(out);
-		try {
+		try (final ZipOutputStream zout = new ZipOutputStream(out)) {
 			while (!queue.isEmpty()) {
 				directory = queue.pop();
 				final File[] listFiles = directory.listFiles();
@@ -170,8 +169,6 @@ public class WorkspaceHelper {
 			zout.putNextEntry(new ZipEntry(pshdPkgFolder + "pshdl_pkg.vhd"));
 			ByteStreams.copy(WorkspaceHelper.class.getResourceAsStream("/pshdl_pkg.vhd"), zout);
 			zout.closeEntry();
-		} finally {
-			zout.close();
 		}
 	}
 
