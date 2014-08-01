@@ -173,16 +173,16 @@ public class WorkspaceHelper {
 	}
 
 	public static File getWorkspaceFile(File workingDir, String fileName) {
-		fileName = fileName.replace(':', '/');
+		final String fixedFileName = fileName.replace(':', '/').trim();
 
-		final File file = new File(workingDir, fileName);
+		final File file = new File(workingDir, fixedFileName);
 		if (!file.getName().matches("[a-zA-Z0-9_\\.-]+"))
 			throw new IllegalArgumentException("Not a valid file name, valid file name must satisfy: [a-zA-Z0-9_\\.-]+");
 		try {
 			final String fc = file.getCanonicalPath();
 			final String wc = workingDir.getCanonicalPath();
 			if (!fc.startsWith(wc)) {
-				LOG.log(Level.WARNING, "getWorkspaceFile()" + workingDir + " " + fileName + " fc:" + fc + " wc:" + wc);
+				LOG.log(Level.WARNING, "getWorkspaceFile()" + workingDir + " " + fixedFileName + " fc:" + fc + " wc:" + wc);
 				throw new IllegalArgumentException("Not a valid filename");
 			}
 			return file;
