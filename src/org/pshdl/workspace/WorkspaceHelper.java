@@ -40,7 +40,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.pshdl.model.utils.PSAbstractCompiler.CompileResult;
-import org.pshdl.model.utils.services.IHDLGenerator.SideFile;
+import org.pshdl.model.utils.services.AuxiliaryContent;
 import org.pshdl.model.validation.Problem;
 import org.pshdl.rest.models.CheckType;
 import org.pshdl.rest.models.CompileInfo;
@@ -252,7 +252,7 @@ public class WorkspaceHelper {
 		final ArrayList<FileRecord> outputs = Lists.newArrayList();
 		if (!res.hasError()) {
 			outputs.add(getRecord(RestConstants.OUTPUTDIR + subDir + res.fileName, wid));
-			for (final SideFile sf : res.sideFiles) {
+			for (final AuxiliaryContent sf : res.sideFiles) {
 				outputs.add(getRecord(RestConstants.OUTPUTDIR + subDir + sf.relPath, wid));
 			}
 		}
