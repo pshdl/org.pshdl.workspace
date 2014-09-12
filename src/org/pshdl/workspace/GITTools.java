@@ -61,6 +61,11 @@ public class GITTools {
 			if (!statusCall.isClean()) {
 				final RepoInfo repo = RepoCache.loadRepo(workingdir.getName());
 				git.commit().setAll(true).setAuthor(repo.getName(), repo.getEMail()).setMessage(message).call();
+				try {
+					Runtime.getRuntime().exec("git update-server-info", null, workingdir);
+				} catch (final Exception e) {
+					e.printStackTrace();
+				}
 			}
 		} finally {
 			lock.unlock();
