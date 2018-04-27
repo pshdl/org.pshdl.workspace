@@ -53,162 +53,167 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 
 public class RepoCache {
-	private static final String JSON_VERSION = "1.0";
-	private static final ObjectWriter jsonWriter = JSONHelper.getWriter();
-	private static final ObjectReader jsonReader = JSONHelper.getReader(RepoInfo.class);
-	private static final Logger log = Logger.getLogger(RepoCache.class.getName());
+    private static final String JSON_VERSION = "1.0";
+    private static final ObjectWriter jsonWriter = JSONHelper.getWriter();
+    private static final ObjectReader jsonReader = JSONHelper.getReader(RepoInfo.class);
+    private static final Logger log = Logger.getLogger(RepoCache.class.getName());
 
-	private static class JsonFileLoader extends CacheLoader<String, RepoInfo> {
+    private static class JsonFileLoader extends CacheLoader<String, RepoInfo> {
 
-		@Override
-		public RepoInfo load(String key) throws Exception {
-			return loadRepoFromFile(WorkspaceHelper.getWorkspacePath(key));
-		}
-	}
+        @Override
+        public RepoInfo load(String key) throws Exception {
+            return loadRepoFromFile(WorkspaceHelper.getWorkspacePath(key));
+        }
+    }
 
-	private static class JsonWriter implements RemovalListener<String, RepoInfo> {
+    private static class JsonWriter implements RemovalListener<String, RepoInfo> {
 
-		@Override
-		public void onRemoval(RemovalNotification<String, RepoInfo> notification) {
-			saveToFile(notification.getValue());
-		}
+        @Override
+        public void onRemoval(RemovalNotification<String, RepoInfo> notification) {
+            saveToFile(notification.getValue());
+        }
 
-	}
+    }
 
-	private static LoadingCache<String, RepoInfo> repoCache = CacheBuilder.newBuilder().removalListener(new JsonWriter()).maximumSize(100).build(new JsonFileLoader());
+    private static LoadingCache<String, RepoInfo> repoCache = CacheBuilder.newBuilder().removalListener(new JsonWriter()).maximumSize(100).build(new JsonFileLoader());
 
-	public static RepoInfo loadRepo(String wd) {
-		try {
-			return repoCache.get(wd);
-		} catch (final ExecutionException e) {
-			throw new RuntimeException(e);
-		}
-	}
+    public static RepoInfo loadRepo(String wd) {
+        try {
+            return repoCache.get(wd);
+        } catch (final ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-	private static RepoInfo loadRepoFromFile(File wd) {
-		final String wid = wd.getName();
-		if (!wd.exists())
-			throw new IllegalArgumentException("No such workspace:" + wid);
-		final File jsonFile = new File(wd, "RepoInfo.json");
-		if (!jsonFile.exists())
-			throw new IllegalArgumentException("No such workspace RepoInfo:" + wid);
-		try {
-			RepoInfo repo = jsonReader.<RepoInfo> readValue(jsonFile);
-			if (!JSON_VERSION.equals(repo.getJsonVersion())) {
-				repo = new RepoInfo();
-				final List<FileInfo> files = Lists.newLinkedList();
-				final File srcGen = new File(wd, RestConstants.OUTPUTDIR);
-				deleteDir(srcGen);
-				final File[] listFiles = wd.listFiles();
-				for (final File file : listFiles) {
-					if (!file.isDirectory()) {
-						if (WorkspaceHelper.REPO_INFO_JSON.equals(file.getName())) {
-							continue;
-						}
-						final FileType ft = FileType.of(file.getName());
-						if (ft != FileType.unknown) {
-							final FileInfo fi = new FileInfo();
-							fi.setFromFile(file, CheckType.unknown, wid, wd);
-							files.add(fi);
-						}
-					}
-				}
-				repo.setInfo(wid, null, null, files.toArray(new FileInfo[files.size()]));
-				repo.setJsonVersion(JSON_VERSION);
-				log.log(Level.INFO, "Upgraded RepoInfo of workspace:" + wid);
-				saveToFile(repo);
-			}
-			final File ownerFile = getOwnerFile(wid);
-			if (ownerFile.exists()) {
-				final List<String> lines = Files.readLines(ownerFile, Charsets.UTF_8);
-				repo.setName(lines.get(0));
-				repo.setEMail(lines.get(1));
-			} else {
-				repo.setName("John doe");
-				repo.setEMail("john@invalid");
-			}
-			return repo;
-		} catch (final Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
+    private static RepoInfo loadRepoFromFile(File wd) {
+        final String wid = wd.getName();
+        if (!wd.exists()) {
+            throw new IllegalArgumentException("No such workspace:" + wid);
+        }
+        final File jsonFile = new File(wd, "RepoInfo.json");
+        if (!jsonFile.exists()) {
+            throw new IllegalArgumentException("No such workspace RepoInfo:" + wid);
+        }
+        try {
+            RepoInfo repo = jsonReader.<RepoInfo> readValue(jsonFile);
+            if (!JSON_VERSION.equals(repo.getJsonVersion())) {
+                repo = new RepoInfo();
+                final List<FileInfo> files = Lists.newLinkedList();
+                final File srcGen = new File(wd, RestConstants.OUTPUTDIR);
+                deleteDir(srcGen);
+                final File[] listFiles = wd.listFiles();
+                for (final File file : listFiles) {
+                    if (!file.isDirectory()) {
+                        if (WorkspaceHelper.REPO_INFO_JSON.equals(file.getName())) {
+                            continue;
+                        }
+                        final FileType ft = FileType.of(file.getName());
+                        if (ft != FileType.unknown) {
+                            final FileInfo fi = new FileInfo();
+                            fi.setFromFile(file, CheckType.unknown, wid, wd);
+                            files.add(fi);
+                        }
+                    }
+                }
+                repo.setInfo(wid, null, null, files.toArray(new FileInfo[files.size()]));
+                repo.setJsonVersion(JSON_VERSION);
+                log.log(Level.INFO, "Upgraded RepoInfo of workspace:" + wid);
+                saveToFile(repo);
+            }
+            final File ownerFile = getOwnerFile(wid);
+            if (ownerFile.exists()) {
+                final List<String> lines = Files.readLines(ownerFile, Charsets.UTF_8);
+                repo.setName(lines.get(0));
+                repo.setEMail(lines.get(1));
+            } else {
+                repo.setName("John doe");
+                repo.setEMail("john@invalid");
+            }
+            return repo;
+        } catch (final Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-	private static void deleteDir(File dir) {
-		if (!dir.exists())
-			return;
-		final File[] files = dir.listFiles();
-		for (final File file : files) {
-			if (file.isDirectory()) {
-				deleteDir(file);
-			}
-			if (!file.delete()) {
-				log.log(Level.WARNING, "Failed to delete file:" + file);
-			}
-		}
-		if (!dir.delete()) {
-			log.log(Level.WARNING, "Failed to delete directory:" + dir);
-		}
-	}
+    private static void deleteDir(File dir) {
+        if (!dir.exists()) {
+            return;
+        }
+        final File[] files = dir.listFiles();
+        for (final File file : files) {
+            if (file.isDirectory()) {
+                deleteDir(file);
+            }
+            if (!file.delete()) {
+                log.log(Level.WARNING, "Failed to delete file:" + file);
+            }
+        }
+        if (!dir.delete()) {
+            log.log(Level.WARNING, "Failed to delete directory:" + dir);
+        }
+    }
 
-	public static RepoInfo createRepo(String wid, String eMail, String name) throws IOException {
-		final RepoInfo info = new RepoInfo();
-		info.setEMail(eMail);
-		info.setId(wid);
-		info.setName(name);
-		info.setJsonVersion(JSON_VERSION);
-		Files.write(name + '\n' + eMail, getOwnerFile(wid), StandardCharsets.UTF_8);
-		final File workspacePath = WorkspaceHelper.getWorkspacePath(wid);
-		if (!workspacePath.mkdirs())
-			throw new IllegalArgumentException("Failed to create directory:" + workspacePath);
-		saveToFile(info);
-		return info;
-	}
+    public static RepoInfo createRepo(String wid, String eMail, String name) throws IOException {
+        final RepoInfo info = new RepoInfo();
+        info.setEMail(eMail);
+        info.setId(wid);
+        info.setName(name);
+        info.setJsonVersion(JSON_VERSION);
+        Files.write(name + '\n' + eMail, getOwnerFile(wid), StandardCharsets.UTF_8);
+        final File workspacePath = WorkspaceHelper.getWorkspacePath(wid);
+        if (!workspacePath.mkdirs()) {
+            throw new IllegalArgumentException("Failed to create directory:" + workspacePath);
+        }
+        saveToFile(info);
+        return info;
+    }
 
-	public static File getOwnerFile(String wid) {
-		return new File(WorkspaceHelper.REPODIR, wid);
-	}
+    public static File getOwnerFile(String wid) {
+        return new File(WorkspaceHelper.REPODIR, wid);
+    }
 
-	public static void saveToFile(RepoInfo info) {
-		final File wd = WorkspaceHelper.getWorkspacePath(info.getId());
-		if (!wd.exists())
-			throw new IllegalArgumentException("No such workspace:" + info.getId());
-		final File jsonFile = new File(wd, "RepoInfo.json");
-		try {
-			jsonWriter.writeValue(jsonFile, info);
-		} catch (final Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
+    public static void saveToFile(RepoInfo info) {
+        final File wd = WorkspaceHelper.getWorkspacePath(info.getId());
+        if (!wd.exists()) {
+            throw new IllegalArgumentException("No such workspace:" + info.getId());
+        }
+        final File jsonFile = new File(wd, "RepoInfo.json");
+        try {
+            jsonWriter.writeValue(jsonFile, info);
+        } catch (final Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-	public static FileInfo removeFile(File workingDir, String f) {
-		final RepoInfo repo = loadRepo(workingDir.getName());
-		for (final Iterator<FileInfo> iterator = repo.getFiles().iterator(); iterator.hasNext();) {
-			final FileInfo fi = iterator.next();
-			if (fi.record.relPath.equals(f)) {
-				iterator.remove();
-				saveToFile(repo);
-				return fi;
-			}
-		}
-		return null;
-	}
+    public static FileInfo removeFile(File workingDir, String f) {
+        final RepoInfo repo = loadRepo(workingDir.getName());
+        for (final Iterator<FileInfo> iterator = repo.getFiles().iterator(); iterator.hasNext();) {
+            final FileInfo fi = iterator.next();
+            if (fi.record.relPath.equals(f)) {
+                iterator.remove();
+                saveToFile(repo);
+                return fi;
+            }
+        }
+        return null;
+    }
 
-	public static void addFile(File workingDir, FileInfo newFile) {
-		final RepoInfo repo = loadRepo(workingDir.getName());
-		repo.getFiles().add(newFile);
-		saveToFile(repo);
-	}
+    public static void addFile(File workingDir, FileInfo newFile) {
+        final RepoInfo repo = loadRepo(workingDir.getName());
+        repo.getFiles().add(newFile);
+        saveToFile(repo);
+    }
 
-	public static FileInfo updateFile(File workingDir, File f) throws IOException {
-		final RepoInfo repo = loadRepo(workingDir.getName());
-		FileInfo info = repo.getFile(f.getName());
-		if (info == null) {
-			info = new FileInfo();
-			repo.getFiles().add(info);
-		}
-		info.setFromFile(f, CheckType.unknown, workingDir.getName(), workingDir);
-		saveToFile(repo);
-		return info;
-	}
+    public static FileInfo updateFile(File workingDir, File f) throws IOException {
+        final RepoInfo repo = loadRepo(workingDir.getName());
+        FileInfo info = repo.getFile(f.getName());
+        if (info == null) {
+            info = new FileInfo();
+            repo.getFiles().add(info);
+        }
+        info.setFromFile(f, CheckType.unknown, workingDir.getName(), workingDir);
+        saveToFile(repo);
+        return info;
+    }
 
 }

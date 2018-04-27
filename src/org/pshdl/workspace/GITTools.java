@@ -43,79 +43,80 @@ import org.pshdl.rest.models.RepoInfo;
 import com.google.common.collect.Maps;
 
 public class GITTools {
-	private static ConcurrentMap<String, Lock> locks = Maps.newConcurrentMap();
+    private static ConcurrentMap<String, Lock> locks = Maps.newConcurrentMap();
 
-	public static void commitAll(File workingdir, String message) throws Exception {
-		final Lock lock = lock(workingdir);
-		try {
-			final Git git = getOrCreateRepository(workingdir);
-			final Status statusCall = git.status().call();
-			final Set<String> untracked = statusCall.getUntracked();
-			if (!untracked.isEmpty()) {
-				final AddCommand add = git.add();
-				for (final String u : untracked) {
-					add.addFilepattern(u);
-				}
-				add.call();
-			}
-			if (!statusCall.isClean()) {
-				final RepoInfo repo = RepoCache.loadRepo(workingdir.getName());
-				git.commit().setAll(true).setAuthor(repo.getName(), repo.getEMail()).setMessage(message).call();
-				try {
-					Runtime.getRuntime().exec("git update-server-info", null, workingdir);
-				} catch (final Exception e) {
-					e.printStackTrace();
-				}
-			}
-		} finally {
-			lock.unlock();
-		}
-	}
+    public static void commitAll(File workingdir, String message) throws Exception {
+        final Lock lock = lock(workingdir);
+        try {
+            final Git git = getOrCreateRepository(workingdir);
+            final Status statusCall = git.status().call();
+            final Set<String> untracked = statusCall.getUntracked();
+            if (!untracked.isEmpty()) {
+                final AddCommand add = git.add();
+                for (final String u : untracked) {
+                    add.addFilepattern(u);
+                }
+                add.call();
+            }
+            if (!statusCall.isClean()) {
+                final RepoInfo repo = RepoCache.loadRepo(workingdir.getName());
+                git.commit().setAll(true).setAuthor(repo.getName(), repo.getEMail()).setMessage(message).call();
+                try {
+                    Runtime.getRuntime().exec("git update-server-info", null, workingdir);
+                } catch (final Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
 
-	public static Lock lock(File workingdir) {
-		final ReentrantLock newLock = new ReentrantLock(true);
-		Lock lock = locks.putIfAbsent(workingdir.getAbsolutePath(), newLock);
-		if (lock == null) {
-			lock = newLock;
-		}
-		lock.lock();
-		return lock;
-	}
+    public static Lock lock(File workingdir) {
+        final ReentrantLock newLock = new ReentrantLock(true);
+        Lock lock = locks.putIfAbsent(workingdir.getAbsolutePath(), newLock);
+        if (lock == null) {
+            lock = newLock;
+        }
+        lock.lock();
+        return lock;
+    }
 
-	private static Git getOrCreateRepository(File workingDir) throws IOException {
-		final File dir = new File(workingDir, ".git");
-		final FileRepositoryBuilder builder = new FileRepositoryBuilder();
-		final Repository repository = builder.setGitDir(dir).setWorkTree(workingDir).build();
-		if (!dir.exists()) {
-			if (!workingDir.exists() && !workingDir.mkdirs())
-				throw new IllegalArgumentException("Failed to create directory:" + workingDir);
-			repository.create();
-		}
-		return new Git(repository);
-	}
+    private static Git getOrCreateRepository(File workingDir) throws IOException {
+        final File dir = new File(workingDir, ".git");
+        final FileRepositoryBuilder builder = new FileRepositoryBuilder();
+        final Repository repository = builder.setGitDir(dir).setWorkTree(workingDir).build();
+        if (!dir.exists()) {
+            if (!workingDir.exists() && !workingDir.mkdirs()) {
+                throw new IllegalArgumentException("Failed to create directory:" + workingDir);
+            }
+            repository.create();
+        }
+        return new Git(repository);
+    }
 
-	public static void addToGit(File workingDir, File newFile) throws Exception {
-		final Lock lock = lock(workingDir);
-		try {
-			final File[] files = { newFile };
-			AddCommand add = getOrCreateRepository(workingDir).add();
-			for (final File file : files) {
-				add = add.addFilepattern(WorkspaceHelper.makeRelative(file, workingDir));
-			}
-			add.call();
-		} finally {
-			lock.unlock();
-		}
-	}
+    public static void addToGit(File workingDir, File newFile) throws Exception {
+        final Lock lock = lock(workingDir);
+        try {
+            final File[] files = { newFile };
+            AddCommand add = getOrCreateRepository(workingDir).add();
+            for (final File file : files) {
+                add = add.addFilepattern(WorkspaceHelper.makeRelative(file, workingDir));
+            }
+            add.call();
+        } finally {
+            lock.unlock();
+        }
+    }
 
-	public static boolean isClean(File workingDir) throws Exception {
-		final Lock lock = lock(workingDir);
-		try {
-			final Git git = getOrCreateRepository(workingDir);
-			final Status status = git.status().call();
-			return status.isClean();
-		} finally {
-			lock.unlock();
-		}
-	}
+    public static boolean isClean(File workingDir) throws Exception {
+        final Lock lock = lock(workingDir);
+        try {
+            final Git git = getOrCreateRepository(workingDir);
+            final Status status = git.status().call();
+            return status.isClean();
+        } finally {
+            lock.unlock();
+        }
+    }
 }
